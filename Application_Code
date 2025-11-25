@@ -1,0 +1,532 @@
+import { useState } from "react";
+import { ProblemInput } from "@/components/ProblemInput";
+import { JourneyDashboard } from "@/components/JourneyDashboard";
+import { ApiViewer } from "@/components/ApiViewer";
+import { SystemInfo } from "@/components/SystemInfo";
+import { BecknArchitecture } from "@/components/BecknArchitecture";
+import { BecknSequenceDiagram } from "@/components/BecknSequenceDiagram";
+import { ImplementationGuide } from "@/components/ImplementationGuide";
+import { AgentArchitecture } from "@/components/AgentArchitecture";
+import { CoOptimizationEngine } from "@/components/CoOptimizationEngine";
+import { AgentWorkflow } from "@/components/AgentWorkflow";
+import { EnergyStorageMonitor } from "@/components/EnergyStorageMonitor";
+import { AuditLogger } from "@/components/AuditLogger";
+import { Activity } from "lucide-react";
+
+export interface JourneyStage {
+  id: string;
+  name: string;
+  status: "pending" | "in-progress" | "completed" | "error";
+  timestamp?: string;
+}
+
+export interface ApiLog {
+  id: string;
+  type: "request" | "response";
+  endpoint: string;
+  method: string;
+  payload: any;
+  timestamp: string;
+  status?: number;
+}
+
+const Index = () => {
+  const [problemStatement, setProblemStatement] = useState("");
+  const [isOrchestrating, setIsOrchestrating] = useState(false);
+  const [journeyStages, setJourneyStages] = useState<JourneyStage[]>([]);
+  const [apiLogs, setApiLogs] = useState<ApiLog[]>([]);
+
+  const handleStartOrchestration = async (problem: string) => {
+    setProblemStatement(problem);
+    setIsOrchestrating(true);
+    
+    // Initialize journey stages aligned with Beckn protocol phases
+    const stages: JourneyStage[] = [
+      { id: "1", name: "Discovery: Find Grid Windows", status: "in-progress" },
+      { id: "2", name: "Select: Choose Optimal Slot", status: "pending" },
+      { id: "3", name: "Init: Initialize Order", status: "pending" },
+      { id: "4", name: "Confirm: Lock Workload", status: "pending" },
+      { id: "5", name: "Fulfillment: Execute & Monitor", status: "pending" },
+      { id: "6", name: "Post-Fulfillment: Settlement", status: "pending" },
+    ];
+    setJourneyStages(stages);
+
+    // Initialize API logs array
+    const logs: ApiLog[] = [];
+
+    // Discovery Phase - discover request
+    logs.push({
+      id: `${Date.now()}-1`,
+      type: "request",
+      endpoint: "/discover",
+      method: "POST",
+      payload: {
+        context: {
+          domain: "beckn.one:DEG:compute-energy:1.0",
+          action: "discover",
+          version: "1.1.0",
+          bap_id: "compute-agent.example.com",
+          bap_uri: "https://compute-agent.example.com",
+          transaction_id: "txn-ce-demo-001",
+          message_id: "msg-discover-001",
+          timestamp: new Date().toISOString()
+        },
+        message: {
+          intent: {
+            item: {
+              descriptor: { name: "AI Training Workload" },
+              tags: {
+                workload_type: "ai_training",
+                compute_load: "500 kW",
+                duration: "4 hours",
+                carbon_budget: "200 kgCO2"
+              }
+            },
+            fulfillment: {
+              start: { time: { range: { start: "2024-01-15T08:00:00Z", end: "2024-01-15T20:00:00Z" } } }
+            }
+          }
+        }
+      },
+      timestamp: new Date().toISOString(),
+    });
+    
+    setApiLogs([...logs]);
+
+    // Simulate progression through stages with API responses
+    setTimeout(() => {
+      // Discovery completed - on_discover response
+      logs.push({
+        id: `${Date.now()}-2`,
+        type: "response",
+        endpoint: "/on_discover",
+        method: "POST",
+        payload: {
+          context: {
+            domain: "beckn.one:DEG:compute-energy:1.0",
+            action: "on_discover",
+            version: "1.1.0",
+            bpp_id: "grid-agent.example.com",
+            bpp_uri: "https://grid-agent.example.com",
+            transaction_id: "txn-ce-demo-001",
+            message_id: "msg-on-discover-001",
+            timestamp: new Date().toISOString()
+          },
+          message: {
+            catalog: {
+              providers: [{
+                id: "grid-provider-uk-001",
+                descriptor: { name: "UK National Grid - Cambridge Region" },
+                items: [{
+                  id: "window-001",
+                  descriptor: { name: "Morning Window - High Renewables" },
+                  time: {
+                    range: { start: "2024-01-15T08:00:00Z", end: "2024-01-15T12:00:00Z" }
+                  },
+                  tags: {
+                    renewable_mix: "82%",
+                    carbon_intensity: "45 gCO2/kWh",
+                    electricity_price: "0.08 GBP/kWh",
+                    grid_capacity: "2 MW"
+                  }
+                }]
+              }]
+            }
+          }
+        },
+        timestamp: new Date().toISOString(),
+        status: 200
+      });
+      
+      stages[0].status = "completed";
+      stages[0].timestamp = new Date().toISOString();
+      stages[1].status = "in-progress";
+      setJourneyStages([...stages]);
+      setApiLogs([...logs]);
+    }, 2000);
+
+    setTimeout(() => {
+      // Select request
+      logs.push({
+        id: `${Date.now()}-3`,
+        type: "request",
+        endpoint: "/select",
+        method: "POST",
+        payload: {
+          context: {
+            domain: "beckn.one:DEG:compute-energy:1.0",
+            action: "select",
+            bap_id: "compute-agent.example.com",
+            transaction_id: "txn-ce-demo-001",
+            message_id: "msg-select-001",
+            timestamp: new Date().toISOString()
+          },
+          message: {
+            order: {
+              provider: { id: "grid-provider-uk-001" },
+              items: [{ id: "window-001", quantity: { selected: { measure: { value: "500", unit: "kW" } } } }]
+            }
+          }
+        },
+        timestamp: new Date().toISOString()
+      });
+      
+      // on_select response
+      logs.push({
+        id: `${Date.now()}-4`,
+        type: "response",
+        endpoint: "/on_select",
+        method: "POST",
+        payload: {
+          context: {
+            domain: "beckn.one:DEG:compute-energy:1.0",
+            action: "on_select",
+            bpp_id: "grid-agent.example.com",
+            transaction_id: "txn-ce-demo-001",
+            message_id: "msg-on-select-001",
+            timestamp: new Date().toISOString()
+          },
+          message: {
+            order: {
+              provider: { id: "grid-provider-uk-001" },
+              items: [{ id: "window-001" }],
+              quote: {
+                price: { value: "160", currency: "GBP" },
+                breakup: [
+                  { title: "Energy Cost", price: { value: "160", currency: "GBP" } },
+                  { title: "Estimated Carbon", price: { value: "90", currency: "kgCO2" } }
+                ]
+              }
+            }
+          }
+        },
+        timestamp: new Date().toISOString(),
+        status: 200
+      });
+      
+      stages[1].status = "completed";
+      stages[1].timestamp = new Date().toISOString();
+      stages[2].status = "in-progress";
+      setJourneyStages([...stages]);
+      setApiLogs([...logs]);
+    }, 4000);
+
+    setTimeout(() => {
+      // Init request
+      logs.push({
+        id: `${Date.now()}-5`,
+        type: "request",
+        endpoint: "/init",
+        method: "POST",
+        payload: {
+          context: {
+            domain: "beckn.one:DEG:compute-energy:1.0",
+            action: "init",
+            transaction_id: "txn-ce-demo-001",
+            message_id: "msg-init-001",
+            timestamp: new Date().toISOString()
+          },
+          message: {
+            order: {
+              provider: { id: "grid-provider-uk-001" },
+              items: [{ id: "window-001" }],
+              billing: { name: "Cambridge AI Labs", email: "billing@cambridge-ai.com" },
+              fulfillment: {
+                customer: { contact: { email: "ops@cambridge-ai.com" } }
+              }
+            }
+          }
+        },
+        timestamp: new Date().toISOString()
+      });
+      
+      // on_init response
+      logs.push({
+        id: `${Date.now()}-6`,
+        type: "response",
+        endpoint: "/on_init",
+        method: "POST",
+        payload: {
+          context: {
+            action: "on_init",
+            transaction_id: "txn-ce-demo-001",
+            message_id: "msg-on-init-001",
+            timestamp: new Date().toISOString()
+          },
+          message: {
+            order: {
+              id: "order-ce-cambridge-001",
+              status: "INITIALIZED",
+              provider: { id: "grid-provider-uk-001" },
+              items: [{ id: "window-001" }],
+              quote: { price: { value: "160", currency: "GBP" } }
+            }
+          }
+        },
+        timestamp: new Date().toISOString(),
+        status: 200
+      });
+      
+      stages[2].status = "completed";
+      stages[2].timestamp = new Date().toISOString();
+      stages[3].status = "in-progress";
+      setJourneyStages([...stages]);
+      setApiLogs([...logs]);
+    }, 6000);
+
+    setTimeout(() => {
+      // Confirm request
+      logs.push({
+        id: `${Date.now()}-7`,
+        type: "request",
+        endpoint: "/confirm",
+        method: "POST",
+        payload: {
+          context: {
+            action: "confirm",
+            transaction_id: "txn-ce-demo-001",
+            message_id: "msg-confirm-001",
+            timestamp: new Date().toISOString()
+          },
+          message: {
+            order: {
+              id: "order-ce-cambridge-001",
+              status: "CONFIRMED"
+            }
+          }
+        },
+        timestamp: new Date().toISOString()
+      });
+      
+      // on_confirm response
+      logs.push({
+        id: `${Date.now()}-8`,
+        type: "response",
+        endpoint: "/on_confirm",
+        method: "POST",
+        payload: {
+          context: {
+            action: "on_confirm",
+            transaction_id: "txn-ce-demo-001",
+            message_id: "msg-on-confirm-001",
+            timestamp: new Date().toISOString()
+          },
+          message: {
+            order: {
+              id: "order-ce-cambridge-001",
+              status: "CONFIRMED",
+              fulfillment: {
+                state: { descriptor: { name: "Fulfillment Loaded" } },
+                agent: { person: { name: "Grid Operator" } }
+              }
+            }
+          }
+        },
+        timestamp: new Date().toISOString(),
+        status: 200
+      });
+      
+      stages[3].status = "completed";
+      stages[3].timestamp = new Date().toISOString();
+      stages[4].status = "in-progress";
+      setJourneyStages([...stages]);
+      setApiLogs([...logs]);
+    }, 8000);
+
+    setTimeout(() => {
+      // Status request
+      logs.push({
+        id: `${Date.now()}-9`,
+        type: "request",
+        endpoint: "/status",
+        method: "POST",
+        payload: {
+          context: {
+            action: "status",
+            transaction_id: "txn-ce-demo-001",
+            message_id: "msg-status-001",
+            timestamp: new Date().toISOString()
+          },
+          message: {
+            order_id: "order-ce-cambridge-001"
+          }
+        },
+        timestamp: new Date().toISOString()
+      });
+      
+      // on_status response
+      logs.push({
+        id: `${Date.now()}-10`,
+        type: "response",
+        endpoint: "/on_status",
+        method: "POST",
+        payload: {
+          context: {
+            action: "on_status",
+            transaction_id: "txn-ce-demo-001",
+            message_id: "msg-on-status-001",
+            timestamp: new Date().toISOString()
+          },
+          message: {
+            order: {
+              id: "order-ce-cambridge-001",
+              status: "IN_PROGRESS",
+              fulfillment: {
+                state: { descriptor: { name: "Workload Executing" } },
+                tags: {
+                  current_power: "485 kW",
+                  carbon_intensity: "47 gCO2/kWh",
+                  renewable_mix: "80%",
+                  progress: "65%"
+                }
+              }
+            }
+          }
+        },
+        timestamp: new Date().toISOString(),
+        status: 200
+      });
+      
+      stages[4].status = "completed";
+      stages[4].timestamp = new Date().toISOString();
+      stages[5].status = "in-progress";
+      setJourneyStages([...stages]);
+      setApiLogs([...logs]);
+    }, 10000);
+
+    setTimeout(() => {
+      // Rating request
+      logs.push({
+        id: `${Date.now()}-11`,
+        type: "request",
+        endpoint: "/rating",
+        method: "POST",
+        payload: {
+          context: {
+            action: "rating",
+            transaction_id: "txn-ce-demo-001",
+            message_id: "msg-rating-001",
+            timestamp: new Date().toISOString()
+          },
+          message: {
+            ratings: [{
+              id: "rating-001",
+              rating_category: "Service",
+              value: "5"
+            }],
+            feedback: {
+              comments: "Excellent grid coordination. Carbon target achieved."
+            }
+          }
+        },
+        timestamp: new Date().toISOString()
+      });
+      
+      // on_rating response
+      logs.push({
+        id: `${Date.now()}-12`,
+        type: "response",
+        endpoint: "/on_rating",
+        method: "POST",
+        payload: {
+          context: {
+            action: "on_rating",
+            transaction_id: "txn-ce-demo-001",
+            message_id: "msg-on-rating-001",
+            timestamp: new Date().toISOString()
+          },
+          message: {
+            feedback: {
+              form: {
+                status: "ACKNOWLEDGED",
+                summary: {
+                  total_energy: "2000 kWh",
+                  total_cost: "£160",
+                  total_carbon: "94 kgCO2",
+                  carbon_saved: "106 kgCO2 vs baseline"
+                }
+              }
+            }
+          }
+        },
+        timestamp: new Date().toISOString(),
+        status: 200
+      });
+      
+      stages[5].status = "completed";
+      stages[5].timestamp = new Date().toISOString();
+      setJourneyStages([...stages]);
+      setApiLogs([...logs]);
+      setIsOrchestrating(false);
+    }, 12000);
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Activity className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Beckn Agent Orchestrator</h1>
+              <p className="text-sm text-muted-foreground">Agentic BAP Sandbox System</p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="container mx-auto px-6 py-8">
+        <div className="space-y-6">
+          {/* Beckn Architecture */}
+          <BecknArchitecture />
+          
+          {/* Beckn Sequence Diagram */}
+          <BecknSequenceDiagram />
+          
+          {/* Agent Architecture - Decentralized System */}
+          <AgentArchitecture />
+          
+          {/* Agent Workflow */}
+          <AgentWorkflow />
+          
+          {/* Real-time Agent Monitoring */}
+          <div className="grid md:grid-cols-2 gap-6">
+            <CoOptimizationEngine />
+            <EnergyStorageMonitor />
+          </div>
+          
+          {/* Audit Logger */}
+          <AuditLogger />
+          
+          {/* System Info */}
+          <SystemInfo />
+          
+          {/* Implementation Guide */}
+          <ImplementationGuide />
+
+          {/* Problem Input Section */}
+          <ProblemInput 
+            onSubmit={handleStartOrchestration}
+            isOrchestrating={isOrchestrating}
+          />
+
+          {/* Journey Dashboard */}
+          {journeyStages.length > 0 && (
+            <JourneyDashboard stages={journeyStages} />
+          )}
+
+          {/* API Viewer */}
+          {apiLogs.length > 0 && (
+            <ApiViewer logs={apiLogs} />
+          )}
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default Index;
